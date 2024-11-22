@@ -72,9 +72,8 @@ int initialize_emg(MyoWare* emg)
 }
 
 // the loop routine runs over and over again forever:
-float* read_emg(MyoWare* emg) 
+float* read_emg(MyoWare* emg, float* packet) 
 {
-  static float emg_readings[3];
 
   // read the sensor's analog output pins  
   const double envMillivolts = emg->readSensorOutput(MyoWare::ENVELOPE);
@@ -84,6 +83,10 @@ float* read_emg(MyoWare* emg)
   emg_readings[0] = (float) envMillivolts;
   emg_readings[1] = (float) rawMillivolts;
   emg_readings[2] = (float) rectMillivolts;
+
+  packet[0] = (float) envMillivolts;
+  packet[1] = (float) rawMillivolts;
+  packet[2] = (float) rectMillivolts;
   
   // print output in millivolts:
   // Serial.print(envMillivolts);
@@ -92,5 +95,5 @@ float* read_emg(MyoWare* emg)
   // Serial.print(",");
   // Serial.println(rectMillivolts);
 
-  return emg_readings;
+  return packet;
 }

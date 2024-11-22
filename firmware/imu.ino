@@ -88,21 +88,18 @@ int initialize_imu(Adafruit_MPU6050* mpu) {
   // delay(100);
 }
 
-float* read_imu(Adafruit_MPU6050* mpu) {
-
-  static float imu_readings[6];
-
+float* read_imu(Adafruit_MPU6050* mpu, float* packet) {
   /* Get new sensor events with the readings */
   sensors_event_t a, g, temp;
   mpu->getEvent(&a, &g, &temp);
 
-  imu_readings[0] = a.acceleration.x;
-  imu_readings[1] = a.acceleration.y;
-  imu_readings[2] = a.acceleration.z;
+  packet[3] = a.acceleration.x;
+  packet[4] = a.acceleration.y;
+  packet[5] = a.acceleration.z;
 
-  imu_readings[3] = g.gyro.x;
-  imu_readings[4] = g.gyro.y;
-  imu_readings[5] = g.gyro.z;
+  packet[6] = g.gyro.x;
+  packet[7] = g.gyro.y;
+  packet[8] = g.gyro.z;
 
   /* Print out the values */
   // Serial.print("Acceleration X: ");
@@ -128,5 +125,5 @@ float* read_imu(Adafruit_MPU6050* mpu) {
   // Serial.println("");
   // delay(500);
 
-  return imu_readings;
+  return packet;
 }

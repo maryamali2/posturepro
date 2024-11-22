@@ -6,8 +6,7 @@
 MyoWare emg;
 Adafruit_MPU6050 mpu;
 int status;
-float* emg_readings;
-float* imu_readings;
+float packet[9];
 
 void setup() {
   // put your setup code here, to run once:
@@ -30,29 +29,29 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  emg_readings = read_emg(&emg);
-  imu_readings = read_imu(&mpu);
+  read_emg(&emg, packet);
+  read_imu(&mpu, packet);
 
   Serial.print("EMG: ");
-  Serial.print(emg_readings[0]);
+  Serial.print(packet[0]);
   Serial.print(", ");
-  Serial.print(emg_readings[1]);
+  Serial.print(packet[1]);
   Serial.print(", ");
-  Serial.println(emg_readings[2]);
+  Serial.println(packet[2]);
 
   Serial.print("Acceleration: ");
-  Serial.print(imu_readings[0]);
+  Serial.print(packet[3]);
   Serial.print(", ");
-  Serial.print(imu_readings[1]);
+  Serial.print(packet[4]);
   Serial.print(", ");
-  Serial.println(imu_readings[2]);
+  Serial.println(packet[5]);
   
   Serial.print("Rotation: ");
-  Serial.print(imu_readings[3]);
+  Serial.print(packet[6]);
   Serial.print(", ");
-  Serial.print(imu_readings[4]);
+  Serial.print(packet[7]);
   Serial.print(", ");
-  Serial.println(imu_readings[5]);
+  Serial.println(packet[8]);
 
   delay(1000);
 }
