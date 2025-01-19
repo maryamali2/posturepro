@@ -2,7 +2,7 @@
 
 // Define a custom BLE service and characteristic
 BLEService customService("180C"); // Custom service UUID
-BLECharacteristic dataCharacteristic("2A57", BLERead | BLENotify | BLEWrite, PACKET_SIZE); // Notify characteristic
+BLECharacteristic dataCharacteristic("2A57", BLERead | BLENotify | BLEWrite, PACKET_SIZE * sizeof(float)); // Notify characteristic
 
 int initialize_ble() {
   // Initialize BLE
