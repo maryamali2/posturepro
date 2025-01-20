@@ -64,28 +64,11 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-
   read_imu(&mpu, packet);
   read_emg(&emg, packet);
 
-  for (int i = 0; i < PACKET_SIZE; i++) {
-    Serial.print("Sending data at position: ");
-    Serial.print(i);
-    Serial.print(" with value: ");
-    Serial.println(packet[i]);
-    status = send_ble(packet[i]);
-
-    if (status == -1) {
-      Serial.println("Error sending over BLE");
-    } else if (status == packet[i]) {
-      Serial.println("Success");
-    } else {
-      Serial.print("Huh: ");
-      Serial.println(status);
-    }
-
-    delay(1);
-  }
+  Serial.println("Sending complete data packet...");
+  int status = send_ble(packet, PACKET_SIZE, true);
 
   // Serial.print("EMG: ");
   // Serial.print(packet[0]);

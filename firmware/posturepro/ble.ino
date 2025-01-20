@@ -2,7 +2,7 @@
 
 // Define a custom BLE service and characteristic
 BLEService customService("180C"); // Custom service UUID
-BLEFloatCharacteristic dataCharacteristic("2A57", BLERead | BLENotify); // Notify characteristic
+BLECharacteristic dataCharacteristic("2A57", BLERead | BLENotify | BLEWrite, PACKET_SIZE * sizeof(float)); // Notify characteristic
 
 int initialize_ble() {
   // Initialize BLE
@@ -23,30 +23,44 @@ int initialize_ble() {
   return 0;
 }
 
-int send_ble(float value) {
+int send_ble(float* values, int num_values, bool ack) {
   BLEDevice central = BLE.central();
-  Serial.print("Value received is: ");
-  Serial.print(value);
-
+  
   if (central) {
     Serial.print("Connected to central: ");
     Serial.println(central.address());
 
-    int i = 0;
-
-    // Stream data while the central is connected
     if (central.connected()) {
-      dataCharacteristic.writeValue(value); // Notify central of new value
+      uint8_t dataBuffer[PACKET_SIZE * sizeof(float)]; // Allocate space for all values
 
-      // Serial.print("Sent value: ");
-      // Serial.println(sensorValue);
+      // Convert float values to bytes
+      for (int i = 0; i < num_values; i++) {
+        memcpy(&dataBuffer[i * sizeof(float)], &values[i], sizeof(float));
+      }
 
-      // delay(1000); // Adjust for desired streaming rate
+      // Send entire packet as a single BLE notification
+      dataCharacteristic.writeValue(dataBuffer, PACKET_SIZE * sizeof(float));
+
+      Serial.println("Sent full data packet over BLE.");
+
+      // Acknowledgment handling (if necessary)
+      unsigned long startTime = millis();
+      while (ack && (millis() - startTime < 100)) {
+        float receivedValue;
+        dataCharacteristic.readValue((uint8_t*)&receivedValue, sizeof(float));
+        if (isnan(receivedValue)) {
+          Serial.println("Received ack");
+          break;
+        }
+        delay(10);
+      }
+
+      return 0;  // Success
     } else {
-      Serial.print("Central disconnected.");
+      Serial.println("Central disconnected.");
       return -1;
     }
-
-    return value;
   }
+
+  return -1; // No central device connected
 }
