@@ -14,6 +14,29 @@ MyoWare emg;
 Adafruit_MPU6050 mpu;
 int status;
 float packet[PACKET_SIZE];
+float calibrated_packet[PACKET_SIZE];
+
+void reset(packet) {
+  for (int i = 0; i < PACKET_SIZE; ++i) {
+    packet[i] = 0;
+  }
+}
+
+void calibrate() {
+  // Initialize calibration packet
+  reset(calibrated_packet);
+
+  // Calibration routine
+  for (int i = 0; i < 500; ++i) {
+    read_imu(&mpu, packet);
+    calibrated_packet[0] += packet[0];
+    calibrated_packet[1] += packet[1];
+    calibrated_packet[2] += packet[2];
+    calibrated_packet[3] += packet[3];
+    calibrated_packet[4] += packet[4];
+    calibrated_packet[5] += packet[5];
+  }
+}
 
 void setup() {
   // put your setup code here, to run once:
