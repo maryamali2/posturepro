@@ -1,8 +1,23 @@
 #include <ArduinoBLE.h>
 
+void onCalibrationWritten(BLEDevice central, BLECharacteristic characteristic);
+
 // Define a custom BLE service and characteristic
 BLEService customService("180C"); // Custom service UUID
-BLECharacteristic dataCharacteristic("2A57", BLERead | BLENotify | BLEWrite, PACKET_SIZE * sizeof(float)); // Notify characteristic
+BLECharacteristic dataCharacteristic("2A57", BLERead | BLENotify | BLEWrite, PACKET_SIZE * sizeof(float)); // Data characteristic
+BLECharacteristic calibrationCharacteristic("2A58", BLEWrite, sizeof(uint8_t)); // calibration button
+
+
+void onCalibrationWritten(BLEDevice central, BLECharacteristic characteristic) {
+  uint8_t command;
+  characteristic.readValue(&command, sizeof(command));
+
+  if (command == 1) {
+    Serial.println("Calibration started...");
+    command = 0;
+    characteristic.writeValue(command, false);
+  }
+}
 
 int initialize_ble() {
   // Initialize BLE
@@ -16,6 +31,8 @@ int initialize_ble() {
   BLE.setAdvertisedService(customService);
   customService.addCharacteristic(dataCharacteristic);
   BLE.addService(customService);
+
+  calibrationCharacteristic.setEventHandler(BLEWritten, onCalibrationWritten);
 
   BLE.advertise();
   Serial.println("BLE device is now advertising...");
