@@ -79,7 +79,7 @@ void setup() {
 
   status = initialize_ble();
   if (status) {
-    Serial.println("Error initialziing BLE");
+    Serial.println("Error initializing BLE");7
     while(1);
   }
 
@@ -95,9 +95,6 @@ void setup() {
     while(1);
   }
 
-  calibrate_rest();
-  calibrate_emg();
-
 }
 
 void loop() {
@@ -105,8 +102,8 @@ void loop() {
   read_imu(&mpu, packet);
   read_emg(&emg, packet);
 
-  // Serial.println("Sending complete data packet...");
-  // int status = send_ble(packet, PACKET_SIZE, true);
+  Serial.println("Sending complete data packet...");
+  int status = send_ble(packet, PACKET_SIZE, true);
 
   // Serial.print("EMG: ");
   // Serial.print(packet[6]);
@@ -115,19 +112,19 @@ void loop() {
   // Serial.print(", ");
   // Serial.println(packet[8]);
 
-  Serial.print("Acceleration: ");
-  Serial.print(packet[0]);
-  Serial.print(", ");
-  Serial.print(packet[1]);
-  Serial.print(", ");
-  Serial.println(packet[2]);
+  // Serial.print("Acceleration: ");
+  // Serial.print(packet[0]);
+  // Serial.print(", ");
+  // Serial.print(packet[1]);
+  // Serial.print(", ");
+  // Serial.println(packet[2]);
   
-  Serial.print("Rotation: ");
-  Serial.print(packet[3]);
-  Serial.print(", ");
-  Serial.print(packet[4]);
-  Serial.print(", ");
-  Serial.println(packet[5]);
+  // Serial.print("Rotation: ");
+  // Serial.print(packet[3]);
+  // Serial.print(", ");
+  // Serial.print(packet[4]);
+  // Serial.print(", ");
+  // Serial.println(packet[5]);
 
   delay(1000);
 }
