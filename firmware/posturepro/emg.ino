@@ -51,7 +51,7 @@
 int initialize_emg(MyoWare* emg) 
 {
   // initialize serial communication at 9600 bits per second:
-  Serial.begin(9600);
+  // Serial.begin(9600);
 
   // output conversion parameters - modify these values to match your setup
   emg->setConvertOutput(true);     // Set to true to convert ADC output to the amplitude of

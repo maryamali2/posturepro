@@ -7,12 +7,6 @@
 // Adafruit_MPU6050 mpu;
 
 int initialize_imu(Adafruit_MPU6050* mpu) {
-  Serial.begin(115200);
-  while (!Serial)
-    delay(10); // will pause Zero, Leonardo, etc until serial console opens
-
-  Serial.println("Adafruit MPU6050 test!");
-
   // Try to initialize!
   if (!mpu->begin()) {
     Serial.println("Failed to find MPU6050 chip");

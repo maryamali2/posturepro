@@ -5,7 +5,10 @@
 #include "limits.h"
 // #include <ArduinoBLE.h>
 
-#define PACKET_SIZE 9
+#define DATA_SIZE 9
+#define HEADER_SIZE 1
+#define PACKET_SIZE (HEADER_SIZE + DATA_SIZE)
+
 
 // Define a custom BLE service and characteristic
 // BLEService customService("180C"); // Custom service UUID
@@ -15,8 +18,11 @@ MyoWare emg;
 Adafruit_MPU6050 mpu;
 int status;
 float packet[PACKET_SIZE];
-float rest[PACKET_SIZE];
+float rest[DATA_SIZE];
 float max_emg;
+
+const uint32_t DATA_PACKET = 0;
+const uint32_t CALIBRATION_PACKET = 1;
 
 void reset(float* packet) {
   for (int i = 0; i < PACKET_SIZE; ++i) {
@@ -35,15 +41,19 @@ void calibrate_rest() {
   while (millis() - startTime < 10000) {
     read_imu(&mpu, packet);
     read_emg(&emg, packet);
-    for (int j = 0; j < PACKET_SIZE; ++j) {
+    for (int j = 0; j < DATA_SIZE; ++j) {
       rest[j] += packet[j];
     }
     numValues += 1;
   }
 
-  for (int j = 0; j < PACKET_SIZE; ++j) {
-      rest[j] = rest[j] / numValues;
+  for (int j = 0; j < DATA_SIZE; ++j) {
+    packet[j] = rest[j] / numValues;
   }
+
+  memcpy(&packet[DATA_SIZE], &CALIBRATION_PACKET, sizeof(float));
+  send_ble(packet, PACKET_SIZE, true);
+
 
   // Serial.print("The rest value for AccX is: ");
   // Serial.println(rest[0]);
@@ -76,25 +86,31 @@ void calibrate_emg() {
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
+  while (!Serial);
 
+  Serial.println("Initializing BLE");
   status = initialize_ble();
   if (status) {
-    Serial.println("Error initializing BLE");7
+    Serial.println("Error initializing BLE");
     while(1);
   }
 
+  Serial.println("Initializing EMG");
   status = initialize_emg(&emg);
   if (status) {
     Serial.println("Error initialziing EMG");
     while(1);
   }
 
+  Serial.println("Initializing IMU");
   status = initialize_imu(&mpu);
   if (status) {
     Serial.println("Error initializing MPU");
     while(1);
   }
 
+  
+  Serial.println("Setup done");
 }
 
 void loop() {
@@ -102,7 +118,7 @@ void loop() {
   read_imu(&mpu, packet);
   read_emg(&emg, packet);
 
-  Serial.println("Sending complete data packet...");
+  memcpy(&packet[DATA_SIZE], &DATA_PACKET, sizeof(float));
   int status = send_ble(packet, PACKET_SIZE, true);
 
   // Serial.print("EMG: ");
@@ -126,5 +142,5 @@ void loop() {
   // Serial.print(", ");
   // Serial.println(packet[5]);
 
-  delay(1000);
+  delay(10);
 }

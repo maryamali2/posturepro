@@ -3,9 +3,9 @@
 void onCalibrationWritten(BLEDevice central, BLECharacteristic characteristic);
 
 // Define a custom BLE service and characteristic
-BLEService customService("180C"); // Custom service UUID
-BLECharacteristic dataCharacteristic("2A57", BLERead | BLENotify | BLEWrite, PACKET_SIZE * sizeof(float)); // Data characteristic
-BLECharacteristic calibrationCharacteristic("2A58", BLEWrite, sizeof(uint8_t)); // calibration button
+BLEService customService("1201"); // Custom service UUID
+BLECharacteristic dataCharacteristic("2A58", BLERead | BLEWrite | BLENotify, PACKET_SIZE * sizeof(float)); // Data characteristic
+BLEByteCharacteristic calibrationCharacteristic("2A57", BLERead | BLEWrite | BLENotify); // calibration button
 
 
 void onCalibrationWritten(BLEDevice central, BLECharacteristic characteristic) {
@@ -14,6 +14,8 @@ void onCalibrationWritten(BLEDevice central, BLECharacteristic characteristic) {
 
   if (command == 1) {
     Serial.println("Calibration started...");
+    calibrate_rest();
+    
     command = 0;
     characteristic.writeValue(command, false);
   }
@@ -30,6 +32,7 @@ int initialize_ble() {
   BLE.setLocalName("ArduinoBLE");
   BLE.setAdvertisedService(customService);
   customService.addCharacteristic(dataCharacteristic);
+  customService.addCharacteristic(calibrationCharacteristic);
   BLE.addService(customService);
 
   calibrationCharacteristic.setEventHandler(BLEWritten, onCalibrationWritten);
@@ -42,13 +45,13 @@ int initialize_ble() {
 
 int send_ble(float* values, int num_values, bool ack) {
   BLEDevice central = BLE.central();
-  
+
   if (central) {
-    Serial.print("Connected to central: ");
-    Serial.println(central.address());
+    // Serial.print("Connected to central: ");
+    // Serial.println(central.address());
 
     if (central.connected()) {
-      uint8_t dataBuffer[PACKET_SIZE * sizeof(float)]; // Allocate space for all values
+      uint8_t dataBuffer[num_values * sizeof(float)]; // Allocate space for all values
 
       // Convert float values to bytes
       for (int i = 0; i < num_values; i++) {
@@ -56,9 +59,9 @@ int send_ble(float* values, int num_values, bool ack) {
       }
 
       // Send entire packet as a single BLE notification
-      dataCharacteristic.writeValue(dataBuffer, PACKET_SIZE * sizeof(float));
+      dataCharacteristic.writeValue(dataBuffer, num_values * sizeof(float));
 
-      Serial.println("Sent full data packet over BLE.");
+      // Serial.println("Sent full data packet over BLE.");
 
       // Acknowledgment handling (if necessary)
       unsigned long startTime = millis();
