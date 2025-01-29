@@ -8,6 +8,8 @@
 #define DATA_SIZE 9
 #define HEADER_SIZE 1
 #define PACKET_SIZE (HEADER_SIZE + DATA_SIZE)
+#define RAD_TO_PI_FACTOR (180 / 3.14159)
+#define ANGLE_MARGIN 8.0
 
 
 // Define a custom BLE service and characteristic
@@ -19,7 +21,9 @@ Adafruit_MPU6050 mpu;
 int status;
 float packet[PACKET_SIZE];
 float rest[DATA_SIZE];
+float base_angles[3];
 float max_emg;
+int calibrated = 0;
 
 const uint32_t DATA_PACKET = 0;
 const uint32_t CALIBRATION_PACKET = 1;
@@ -33,12 +37,13 @@ void reset(float* packet) {
 void calibrate_rest() {
   // Initialize rest array
   Serial.println("Starting baseline calibration...");
+  calibrated = 1;
   reset(rest);
 
   unsigned long startTime = millis();
   int numValues = 0;
 
-  while (millis() - startTime < 10000) {
+  while (millis() - startTime < 5000) {
     read_imu(&mpu, packet);
     read_emg(&emg, packet);
     for (int j = 0; j < DATA_SIZE; ++j) {
@@ -51,8 +56,19 @@ void calibrate_rest() {
     packet[j] = rest[j] / numValues;
   }
 
-  memcpy(&packet[DATA_SIZE], &CALIBRATION_PACKET, sizeof(float));
-  send_ble(packet, PACKET_SIZE, true);
+  base_angles[0] = acos(packet[0] / 9.81) * RAD_TO_PI_FACTOR;
+  base_angles[1] = acos(packet[1] / 9.81) * RAD_TO_PI_FACTOR;
+  base_angles[2] = acos(packet[2] / 9.81) * RAD_TO_PI_FACTOR;
+
+  Serial.print("Base: ");
+  Serial.print(base_angles[0]);
+  Serial.print(", ");
+  Serial.print(base_angles[1]);
+  Serial.print(", ");
+  Serial.print(base_angles[2]);
+
+  // memcpy(&packet[DATA_SIZE], &CALIBRATION_PACKET, sizeof(float));
+  // send_ble(packet, PACKET_SIZE, true);
 
 
   // Serial.print("The rest value for AccX is: ");
@@ -83,6 +99,24 @@ void calibrate_emg() {
   Serial.println("Completed EMG calibration.");
 }
 
+int check_tilt() {
+  if (calibrated) {
+    float angleX = acos(packet[0] / 9.81) * RAD_TO_PI_FACTOR;
+    float angleY = acos(packet[1] / 9.81) * RAD_TO_PI_FACTOR;
+    float angleZ = acos(packet[2] / 9.81) * RAD_TO_PI_FACTOR;
+
+    if ((angleX - base_angles[0] > ANGLE_MARGIN) && (angleY - base_angles[1] < -ANGLE_MARGIN)) {
+      return 1;
+    } else if ((angleX - base_angles[0] < -ANGLE_MARGIN) && (angleY - base_angles[1] > ANGLE_MARGIN)) {
+      return 2;
+    } else {
+      return 0;
+    }
+  } else {
+    return -1;
+  }
+}
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
@@ -109,6 +143,9 @@ void setup() {
     while(1);
   }
 
+  // calibrate_rest();
+
+  // delay(3000);
   
   Serial.println("Setup done");
 }
@@ -119,7 +156,24 @@ void loop() {
   read_emg(&emg, packet);
 
   memcpy(&packet[DATA_SIZE], &DATA_PACKET, sizeof(float));
-  int status = send_ble(packet, PACKET_SIZE, true);
+  status = send_ble(packet, PACKET_SIZE, true);
+
+  status = check_tilt();
+  switch (status) {
+    case -1:
+      Serial.println("Error: IMU not calibrated");
+      break;
+    case 0:
+      Serial.println("NEUTRAL");
+      break;
+    case 1:
+      Serial.println("TILT RIGHT");
+      break;
+    case 2:
+      Serial.println("TILT LEFT");
+      break;
+  }
+  
 
   // Serial.print("EMG: ");
   // Serial.print(packet[6]);
@@ -142,5 +196,5 @@ void loop() {
   // Serial.print(", ");
   // Serial.println(packet[5]);
 
-  delay(10);
+  delay(1000);
 }
