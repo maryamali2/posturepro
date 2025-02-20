@@ -11,8 +11,8 @@
 #define RAD_TO_DEG (180 / 3.14159)
 #define ANGLE_MARGIN 8.0
 #define GRAVITY 9.81
-#define ALPHA 0.1
-#define EMG_THRESHOLD 50
+#define ALPHA 0.2
+#define EMG_THRESHOLD 400
 
 
 // Define a custom BLE service and characteristic
@@ -44,6 +44,14 @@ float pitch_calibrated = 0.0;
 float roll_estimate = 0.0;
 float pitch_estimate = 0.0;
 float dt = 0.0;
+
+// Initial Estimates
+float roll_at_rest = 0.0;
+float pitch_at_rest = 0.0;
+float emg1_at_rest = 0;
+float emg2_at_rest = 0;
+float emg3_at_rest = 0;
+float emg4_at_rest = 0;
 
 void simple_lowpass(float* lp_output, float* data_input) {
   for (int i = 0; i < DATA_SIZE; ++i) {
@@ -169,21 +177,32 @@ void loop() {
   // Serial.print(roll_estimate);
   // Serial.print("  Pitch is: ");
   // Serial.println(pitch_estimate);
-  if (roll_estimate - roll_at_rest > 0.0) {
-    Serial.println("TILT FRONT/BACK");
+
+  Serial.print("Tilt Sideways: ");
+  Serial.print("Tilt Front/Back: ");
+  if (abs(roll_estimate - roll_at_rest) > 0.30) {
+    Serial.print("Y");
+  } else {
+    Serial.print("N");
   }
-  if (pitch_estimate - roll_at_rest > 0.0) {
-    Serial.println("TILT SIDEWAYS");
+  // Serial.print("  Tilt Sideways: ");
+  Serial.print("    Tilt Front/Back: ");
+  if (abs(pitch_estimate - pitch_at_rest) > 0.30) {
+    Serial.println("Y");
+  } else {
+    Serial.println("N");
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////     EMG READINGS       ////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  if (packet[6] > emg1_at_rest + EMG_THRESHOLD) {
-    Serial.println("FLEX");
-  } else {
-    Serial.println("NO FLEX");
-  }
+  // Serial.print("    Muscle Flex: ");
+  // if (packet[6] > emg1_at_rest + EMG_THRESHOLD) {
+  //   Serial.println("Y");
+  // } else {
+  //   Serial.println("N");
+  // }
+  // Serial.println(packet[6]);
 
-  // delay(200);
+  // delay(100);
 }

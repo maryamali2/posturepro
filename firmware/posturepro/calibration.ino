@@ -1,14 +1,6 @@
 float dt_calibration = 0.0;
 float lp_calibrated[DATA_SIZE];
 
-// EsTimates
-float roll_at_rest = 0.0;
-float pitch_at_rest = 0.0;
-float emg1_at_rest = 0;
-float emg2_at_rest = 0;
-float emg3_at_rest = 0;
-float emg4_at_rest = 0;
-
 // Sums
 float sum_roll = 0.0;
 float sum_pitch = 0.0;
@@ -25,7 +17,7 @@ void calibrate_rest() {
 
   while (millis() - start_time_cal < 5000) {
     read_imu(&mpu, packet);
-    read_emg(&emg, packet);
+    read_emg(&emg1, packet, 6);
 
     simple_lowpass(lp_calibrated, packet);
 
@@ -46,6 +38,7 @@ void calibrate_rest() {
   // Get average
   roll_at_rest = sum_roll / numValues;
   pitch_at_rest = sum_pitch / numValues;
+  emg1_at_rest = emg1_at_rest / numValues;
 
   memcpy(&packet[DATA_SIZE], &CALIBRATION_PACKET, sizeof(float));
   send_ble(packet, PACKET_SIZE, true);
@@ -71,7 +64,7 @@ void calibrate_emg() {
   unsigned long startCal = millis();
 
   while (millis() - startCal < 10000) {
-    read_emg(&emg, packet);
+    read_emg(&emg1, packet, 6);
     if (packet[8] > max_emg) {
       max_emg = packet[8];
     }
