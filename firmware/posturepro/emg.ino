@@ -48,7 +48,7 @@
 // MyoWare myoware;
 
 // the setup routine runs once when you press reset:
-int initialize_emg(MyoWare* emg) 
+int initialize_emg(MyoWare* emg, int pin) 
 {
   // initialize serial communication at 9600 bits per second:
   // Serial.begin(9600);
@@ -63,30 +63,30 @@ int initialize_emg(MyoWare* emg)
                                       // adjust the potentiometer setting such that the
                                       // max muscle reading is below 3.3V then update this
                                       // parameter to the measured value of the potentiometer
-  emg->setENVPin(A0);              // Arduino pin connected to ENV
-  emg->setRAWPin(A1);              // Arduino pin connected to RAW
-  emg->setREFPin(A2);              // Arduino pin connected to REF
-  emg->setRECTPin(A3);             // Arduino pin connected to RECT
+  emg->setENVPin(pin);              // Arduino pin connected to ENV
+  //emg->setRAWPin(A1);              // Arduino pin connected to RAW
+  //emg->setREFPin(A2);              // Arduino pin connected to REF
+  //emg->setRECTPin(A3);             // Arduino pin connected to RECT
 
   return 0;
 }
 
 // the loop routine runs over and over again forever:
-float* read_emg(MyoWare* emg, float* packet) 
+float* read_emg(MyoWare* emg, float* packet, int packet_position) 
 {
 
   // read the sensor's analog output pins  
   const double envMillivolts = emg->readSensorOutput(MyoWare::ENVELOPE);
-  const double rawMillivolts = emg->readSensorOutput(MyoWare::RAW);
-  const double rectMillivolts = emg->readSensorOutput(MyoWare::RECTIFIED);
+  // const double rawMillivolts = emg->readSensorOutput(MyoWare::RAW);
+  // const double rectMillivolts = emg->readSensorOutput(MyoWare::RECTIFIED);
 
   // emg_readings[0] = (float) envMillivolts;
   // emg_readings[1] = (float) rawMillivolts;
   // emg_readings[2] = (float) rectMillivolts;
 
-  packet[6] = (float) envMillivolts;
-  packet[7] = (float) rawMillivolts;
-  packet[8] = (float) rectMillivolts;
+  packet[packet_position] = (float) envMillivolts;
+  // packet[7] = (float) rawMillivolts;
+  // packet[8] = (float) rectMillivolts;
   
   // print output in millivolts:
   // Serial.print(envMillivolts);

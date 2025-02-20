@@ -5,22 +5,32 @@
 #include "limits.h"
 // #include <ArduinoBLE.h>
 
-#define DATA_SIZE 9
+#define DATA_SIZE 10
 #define HEADER_SIZE 1
 #define PACKET_SIZE (HEADER_SIZE + DATA_SIZE)
-#define RAD_TO_PI_FACTOR (180 / 3.14159)
+#define RAD_TO_DEG (180 / 3.14159)
 #define ANGLE_MARGIN 8.0
+#define GRAVITY 9.81
+#define ALPHA 0.1
+#define EMG_THRESHOLD 50
 
 
 // Define a custom BLE service and characteristic
 // BLEService customService("180C"); // Custom service UUID
 // BLEIntCharacteristic dataCharacteristic("2A57", BLERead | BLENotify); // Notify characteristic
 
-MyoWare emg;
+// Sensors
+MyoWare emg1;
+MyoWare emg2;
+MyoWare emg3;
+MyoWare emg4;
 Adafruit_MPU6050 mpu;
+
 int status;
 float packet[PACKET_SIZE];
+float lp_packet[DATA_SIZE];
 float rest[DATA_SIZE];
+float euler[2]; // 0 is Roll, 1 is Pitch
 float base_angles[3];
 float max_emg;
 int calibrated = 0;
@@ -28,82 +38,30 @@ int calibrated = 0;
 const uint32_t DATA_PACKET = 0;
 const uint32_t CALIBRATION_PACKET = 1;
 
-void reset(float* packet) {
-  for (int i = 0; i < PACKET_SIZE; ++i) {
+unsigned long startTime;
+float roll_calibrated = 0.0;
+float pitch_calibrated = 0.0;
+float roll_estimate = 0.0;
+float pitch_estimate = 0.0;
+float dt = 0.0;
+
+void simple_lowpass(float* lp_output, float* data_input) {
+  for (int i = 0; i < DATA_SIZE; ++i) {
+    lp_output[i] = (lp_output[i] + data_input[i]) / 2;
+  }
+}
+
+void reset(float* packet, int size) {
+  for (int i = 0; i < size; ++i) {
     packet[i] = 0;
   }
 }
 
-void calibrate_rest() {
-  // Initialize rest array
-  Serial.println("Starting baseline calibration...");
-  calibrated = 1;
-  reset(rest);
-
-  unsigned long startTime = millis();
-  int numValues = 0;
-
-  while (millis() - startTime < 5000) {
-    read_imu(&mpu, packet);
-    read_emg(&emg, packet);
-    for (int j = 0; j < DATA_SIZE; ++j) {
-      rest[j] += packet[j];
-    }
-    numValues += 1;
-  }
-
-  for (int j = 0; j < DATA_SIZE; ++j) {
-    packet[j] = rest[j] / numValues;
-  }
-
-  base_angles[0] = acos(packet[0] / 9.81) * RAD_TO_PI_FACTOR;
-  base_angles[1] = acos(packet[1] / 9.81) * RAD_TO_PI_FACTOR;
-  base_angles[2] = acos(packet[2] / 9.81) * RAD_TO_PI_FACTOR;
-
-  Serial.print("Base: ");
-  Serial.print(base_angles[0]);
-  Serial.print(", ");
-  Serial.print(base_angles[1]);
-  Serial.print(", ");
-  Serial.print(base_angles[2]);
-
-  // memcpy(&packet[DATA_SIZE], &CALIBRATION_PACKET, sizeof(float));
-  // send_ble(packet, PACKET_SIZE, true);
-
-
-  // Serial.print("The rest value for AccX is: ");
-  // Serial.println(rest[0]);
-  // Serial.print("The rest value for AccY is: ");
-  // Serial.println(rest[1]);
-  // Serial.print("The rest value for AccZ is: ");
-  // Serial.println(rest[2]);
-
-  Serial.println("Completed baseline calibration.");
-}
-
-void calibrate_emg() {
-  Serial.println("Calibrating EMG...");
-  max_emg = INT_MIN;
-
-  Serial.println("Flex your muscle to the maximum extent...");
-  unsigned long startTime = millis();
-  int numValues = 0;
-
-  while (millis() - startTime < 10000) {
-    read_emg(&emg, packet);
-    if (packet[8] > max_emg) {
-      max_emg = packet[8];
-    }
-  }
-
-  Serial.println("Completed EMG calibration.");
-}
-
 int check_tilt() {
   if (calibrated) {
-    float angleX = acos(packet[0] / 9.81) * RAD_TO_PI_FACTOR;
-    float angleY = acos(packet[1] / 9.81) * RAD_TO_PI_FACTOR;
-    float angleZ = acos(packet[2] / 9.81) * RAD_TO_PI_FACTOR;
+    float angleX = acos(packet[0] / 9.81) * RAD_TO_DEG;
+    float angleY = acos(packet[1] / 9.81) * RAD_TO_DEG;
+    float angleZ = acos(packet[2] / 9.81) * RAD_TO_DEG;
 
     if ((angleX - base_angles[0] > ANGLE_MARGIN) && (angleY - base_angles[1] < -ANGLE_MARGIN)) {
       return 1;
@@ -118,10 +76,15 @@ int check_tilt() {
 }
 
 void setup() {
-  // put your setup code here, to run once:
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////     SERIAL SET UP       ////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Serial.begin(9600);
   while (!Serial);
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////     BLE SET UP       ///////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Serial.println("Initializing BLE");
   status = initialize_ble();
   if (status) {
@@ -129,13 +92,34 @@ void setup() {
     while(1);
   }
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////     EMG SET UP       ///////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Serial.println("Initializing EMG");
-  status = initialize_emg(&emg);
+  status = initialize_emg(&emg1, A0);
   if (status) {
-    Serial.println("Error initialziing EMG");
+    Serial.println("Error initialziing EMG 1");
+    while(1);
+  }
+  status = initialize_emg(&emg1, A1);
+  if (status) {
+    Serial.println("Error initialziing EMG 2");
+    while(1);
+  }
+  status = initialize_emg(&emg1, A2);
+  if (status) {
+    Serial.println("Error initialziing EMG 3");
+    while(1);
+  }
+  status = initialize_emg(&emg1, A3);
+  if (status) {
+    Serial.println("Error initialziing EMG 4");
     while(1);
   }
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////     IMU SET UP       ///////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Serial.println("Initializing IMU");
   status = initialize_imu(&mpu);
   if (status) {
@@ -143,58 +127,63 @@ void setup() {
     while(1);
   }
 
-  // calibrate_rest();
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////     CALIBRATE REST       ///////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  calibrate_rest();
 
-  // delay(3000);
+  reset(packet, DATA_SIZE);
+  reset(lp_packet, DATA_SIZE);
+  reset(rest, DATA_SIZE);
+  reset(base_angles, 3);
+
+  startTime = millis();
   
   Serial.println("Setup done");
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////     READ DATA FROM SENSORS       ///////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   read_imu(&mpu, packet);
-  read_emg(&emg, packet);
+  read_emg(&emg1, packet, 6);
+  // read_emg(&emg2, packet, 7);
+  // read_emg(&emg3, packet, 8);
+  // read_emg(&emg4, packet, 9);
 
-  memcpy(&packet[DATA_SIZE], &DATA_PACKET, sizeof(float));
-  status = send_ble(packet, PACKET_SIZE, true);
+  // Filter
+  simple_lowpass(lp_packet, packet);
 
-  status = check_tilt();
-  switch (status) {
-    case -1:
-      Serial.println("Error: IMU not calibrated");
-      break;
-    case 0:
-      Serial.println("NEUTRAL");
-      break;
-    case 1:
-      Serial.println("TILT RIGHT");
-      break;
-    case 2:
-      Serial.println("TILT LEFT");
-      break;
+  // // memcpy(&packet[DATA_SIZE], &DATA_PACKET, sizeof(float));
+  // // status = send_ble(packet, PACKET_SIZE, true);
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////     COMPLEMENTARY FILTER       /////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  dt = (millis() - startTime) * 1/1000;
+  startTime = millis();
+
+  complementary_filter(dt, lp_packet, &roll_estimate, &pitch_estimate);
+  // Serial.print("Roll is: ");
+  // Serial.print(roll_estimate);
+  // Serial.print("  Pitch is: ");
+  // Serial.println(pitch_estimate);
+  if (roll_estimate - roll_at_rest > 0.0) {
+    Serial.println("TILT FRONT/BACK");
   }
-  
+  if (pitch_estimate - roll_at_rest > 0.0) {
+    Serial.println("TILT SIDEWAYS");
+  }
 
-  // Serial.print("EMG: ");
-  // Serial.print(packet[6]);
-  // Serial.print(", ");
-  // Serial.print(packet[7]);
-  // Serial.print(", ");
-  // Serial.println(packet[8]);
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////     EMG READINGS       ////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  if (packet[6] > emg1_at_rest + EMG_THRESHOLD) {
+    Serial.println("FLEX");
+  } else {
+    Serial.println("NO FLEX");
+  }
 
-  // Serial.print("Acceleration: ");
-  // Serial.print(packet[0]);
-  // Serial.print(", ");
-  // Serial.print(packet[1]);
-  // Serial.print(", ");
-  // Serial.println(packet[2]);
-  
-  // Serial.print("Rotation: ");
-  // Serial.print(packet[3]);
-  // Serial.print(", ");
-  // Serial.print(packet[4]);
-  // Serial.print(", ");
-  // Serial.println(packet[5]);
-
-  delay(1000);
+  // delay(200);
 }

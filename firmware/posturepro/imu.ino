@@ -11,9 +11,6 @@ int initialize_imu(Adafruit_MPU6050* mpu) {
   if (!mpu->begin()) {
     Serial.println("Failed to find MPU6050 chip");
     return 1;
-    // while (1) {
-    //   delay(10);
-    // }
   }
   Serial.println("MPU6050 Found!");
 
@@ -77,9 +74,6 @@ int initialize_imu(Adafruit_MPU6050* mpu) {
   }
 
   return 0;
-
-  // Serial.println("");
-  // delay(100);
 }
 
 float* read_imu(Adafruit_MPU6050* mpu, float* packet) {
@@ -94,23 +88,6 @@ float* read_imu(Adafruit_MPU6050* mpu, float* packet) {
   packet[3] = g.gyro.x;
   packet[4] = g.gyro.y;
   packet[5] = g.gyro.z;
-
-  /* Print out the values */
-  // Serial.print("Acceleration X: ");
-  // Serial.print(a.acceleration.x);
-  // Serial.print(", Y: ");
-  // Serial.print(a.acceleration.y);
-  // Serial.print(", Z: ");
-  // Serial.print(a.acceleration.z);
-  // Serial.println(" m/s^2");
-
-  // Serial.print("Rotation X: ");
-  // Serial.print(g.gyro.x);
-  // Serial.print(", Y: ");
-  // Serial.print(g.gyro.y);
-  // Serial.print(", Z: ");
-  // Serial.print(g.gyro.z);
-  // Serial.println(" rad/s");
 
   // Serial.print("Temperature: ");
   // Serial.print(temp.temperature);
