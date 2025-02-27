@@ -64,9 +64,9 @@ int initialize_emg(MyoWare* emg, int pin)
                                       // max muscle reading is below 3.3V then update this
                                       // parameter to the measured value of the potentiometer
   emg->setENVPin(pin);              // Arduino pin connected to ENV
-  emg->setRAWPin(A1);              // Arduino pin connected to RAW
-  emg->setREFPin(A2);              // Arduino pin connected to REF
-  emg->setRECTPin(A3);             // Arduino pin connected to RECT
+  // emg->setRAWPin(A1);              // Arduino pin connected to RAW
+  // emg->setREFPin(A2);              // Arduino pin connected to REF
+  // emg->setRECTPin(A3);             // Arduino pin connected to RECT
 
   return 0;
 }
@@ -74,26 +74,8 @@ int initialize_emg(MyoWare* emg, int pin)
 // the loop routine runs over and over again forever:
 float* read_emg(MyoWare* emg, float* packet, int packet_position) 
 {
-
-  // read the sensor's analog output pins  
   const double envMillivolts = emg->readSensorOutput(MyoWare::ENVELOPE);
-  // const double rawMillivolts = emg->readSensorOutput(MyoWare::RAW);
-  // const double rectMillivolts = emg->readSensorOutput(MyoWare::RECTIFIED);
-
-  // emg_readings[0] = (float) envMillivolts;
-  // emg_readings[1] = (float) rawMillivolts;
-  // emg_readings[2] = (float) rectMillivolts;
-
   packet[packet_position] = (float) envMillivolts * 10000;
-  // packet[7] = (float) rawMillivolts;
-  // packet[8] = (float) rectMillivolts;
-  
-  // print output in millivolts:
-  // Serial.print(envMillivolts);
-  // Serial.print(",");
-  // Serial.print(rawMillivolts);
-  // Serial.print(",");
-  // Serial.println(rectMillivolts);
 
   return packet;
 }

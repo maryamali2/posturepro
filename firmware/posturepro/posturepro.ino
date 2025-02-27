@@ -5,7 +5,7 @@
 #include "limits.h"
 // #include <ArduinoBLE.h>
 
-#define DATA_SIZE 10
+#define DATA_SIZE 9
 #define HEADER_SIZE 1
 #define PACKET_SIZE (HEADER_SIZE + DATA_SIZE)
 #define RAD_TO_DEG (180 / 3.14159)
@@ -29,7 +29,8 @@ Adafruit_MPU6050 mpu;
 int status;
 float packet[PACKET_SIZE];
 float lp_packet[DATA_SIZE];
-float rest[DATA_SIZE];
+float calibrated_packet[DATA_SIZE];
+float temp_cal_packet[DATA_SIZE];
 float euler[2]; // 0 is Roll, 1 is Pitch
 float base_angles[3];
 float max_emg;
@@ -46,6 +47,8 @@ float pitch_estimate = 0.0;
 float dt = 0.0;
 
 // Initial Estimates
+float roll_temp = 0.0;
+float pitch_temp = 0.0;
 float roll_at_rest = 0.0;
 float pitch_at_rest = 0.0;
 float emg1_at_rest = 0;
@@ -62,24 +65,6 @@ void simple_lowpass(float* lp_output, float* data_input) {
 void reset(float* packet, int size) {
   for (int i = 0; i < size; ++i) {
     packet[i] = 0;
-  }
-}
-
-int check_tilt() {
-  if (calibrated) {
-    float angleX = acos(packet[0] / 9.81) * RAD_TO_DEG;
-    float angleY = acos(packet[1] / 9.81) * RAD_TO_DEG;
-    float angleZ = acos(packet[2] / 9.81) * RAD_TO_DEG;
-
-    if ((angleX - base_angles[0] > ANGLE_MARGIN) && (angleY - base_angles[1] < -ANGLE_MARGIN)) {
-      return 1;
-    } else if ((angleX - base_angles[0] < -ANGLE_MARGIN) && (angleY - base_angles[1] > ANGLE_MARGIN)) {
-      return 2;
-    } else {
-      return 0;
-    }
-  } else {
-    return -1;
   }
 }
 
@@ -109,17 +94,17 @@ void setup() {
     Serial.println("Error initialziing EMG 1");
     while(1);
   }
-  status = initialize_emg(&emg1, A1);
+  status = initialize_emg(&emg2, A1);
   if (status) {
     Serial.println("Error initialziing EMG 2");
     while(1);
   }
-  status = initialize_emg(&emg1, A2);
+  status = initialize_emg(&emg3, A2);
   if (status) {
     Serial.println("Error initialziing EMG 3");
     while(1);
   }
-  status = initialize_emg(&emg1, A3);
+  status = initialize_emg(&emg4, A3);
   if (status) {
     Serial.println("Error initialziing EMG 4");
     while(1);
@@ -138,11 +123,10 @@ void setup() {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////     CALIBRATE REST       ///////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  calibrate_rest();
-
   reset(packet, DATA_SIZE);
   reset(lp_packet, DATA_SIZE);
-  reset(rest, DATA_SIZE);
+  reset(calibrated_packet, DATA_SIZE);
+  reset(temp_cal_packet, DATA_SIZE);
   reset(base_angles, 3);
 
   startTime = millis();
@@ -179,7 +163,7 @@ void loop() {
   // Serial.println(pitch_estimate);
 
   Serial.print("Tilt Sideways: ");
-  Serial.print("Tilt Front/Back: ");
+  // Serial.print("Tilt Front/Back: ");
   if (abs(roll_estimate - roll_at_rest) > 0.30) {
     Serial.print("Y");
   } else {
