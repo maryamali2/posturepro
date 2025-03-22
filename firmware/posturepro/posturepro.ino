@@ -98,7 +98,7 @@ void setup() {
     Serial.println("Error initializing EMG 1");
     while(1);
   }
-  status = initialize_emg(&emg2, A2);
+  status = initialize_emg(&emg2, A1);
   if (status) {
     Serial.println("Error initializing EMG 2");
     while(1);
@@ -168,14 +168,17 @@ void loop() {
   Serial.print("    Pitch: ");
   Serial.print(pitch_estimate);
 
+  Serial.print("  Depth: ");
+  Serial.print(depth);
+
   Serial.print("  EMG 1: ");
   Serial.print(lp_packet[6]);
 
   Serial.print("  EMG 2: ");
-  Serial.println(lp_packet[7]);
+  Serial.print(lp_packet[7]);
 
   Serial.print("  EMG 3: ");
-  Serial.println(lp_packet[8]);
+  Serial.print(lp_packet[8]);
 
   Serial.print("  EMG 4: ");
   Serial.println(lp_packet[9]);
@@ -223,5 +226,5 @@ void loop() {
   // }
   // Serial.println(packet[6]);
 
-  delay(50);
+  delay(500);
 }
