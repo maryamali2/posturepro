@@ -1,5 +1,5 @@
 float dt_calibration = 0.0;
-float lp_calibrated[DATA_SIZE];
+float lp_calibrated[CALIBRATED_SIZE];
 
 // Sums
 float sum_roll = 0.0;
@@ -8,8 +8,8 @@ float sum_pitch = 0.0;
 void calibrate_rest() {
   // Initialize rest array
   Serial.println("Starting baseline calibration...");
-  reset(calibrated_packet, DATA_SIZE);
-  reset(temp_cal_packet, DATA_SIZE);
+  reset(calibrated_packet, CALIBRATED_SIZE);
+  reset(temp_cal_packet, CALIBRATED_SIZE);
 
   int numValues = 0;
   unsigned long calibration_start = millis();
@@ -17,6 +17,8 @@ void calibrate_rest() {
 
   while (millis() - calibration_start < 5000) {
     // Read IMU values into packet
+
+    //////////// Using temp_cal_packet
     read_imu(&mpu, temp_cal_packet);
 
     // Read 4 EMG values into packet
@@ -27,6 +29,8 @@ void calibrate_rest() {
 
     simple_lowpass(lp_calibrated, temp_cal_packet);
 
+    //////////// Using lp_calibrated
+
     dt_calibration = (millis() - start_dt) * 1/1000;
     start_dt = millis();
 
@@ -34,10 +38,10 @@ void calibrate_rest() {
 
     sum_roll += roll_temp;
     sum_pitch += pitch_temp;
-    emg1_at_rest += temp_cal_packet[6];
-    emg2_at_rest += temp_cal_packet[7];
-    emg3_at_rest += temp_cal_packet[8];
-    emg4_at_rest += temp_cal_packet[9];
+    emg1_at_rest += lp_calibrated[6];
+    emg2_at_rest += lp_calibrated[7];
+    emg3_at_rest += lp_calibrated[8];
+    emg4_at_rest += lp_calibrated[9];
     numValues += 1;
   }
 
@@ -49,25 +53,28 @@ void calibrate_rest() {
   emg3_at_rest = emg3_at_rest / numValues;
   emg4_at_rest = emg4_at_rest / numValues;
 
-  // Finalize calibrated packet
-  for (int i = 0; i < 6; ++i) {
-    calibrated_packet[i] = 0;
-  }
-  calibrated_packet[6] = emg1_at_rest;
-  calibrated_packet[7] = emg2_at_rest;
-  calibrated_packet[8] = emg3_at_rest;
-  calibrated_packet[9] = emg4_at_rest;
+  //////////// Using calibrated_packet
+  calibrated_packet[0] = emg1_at_rest;
+  calibrated_packet[1] = emg2_at_rest;
+  calibrated_packet[2] = emg3_at_rest;
+  calibrated_packet[3] = emg4_at_rest;
+  calibrated_packet[4] = 0;
+  calibrated_packet[5] = 0;
+  calibrated_packet[6] = 0;
 
-  memcpy(&calibrated_packet[DATA_SIZE], &CALIBRATION_PACKET, sizeof(float));
-  send_ble(calibrated_packet, PACKET_SIZE, true);
+  ////////////// PACKET STRUCTURE //////////////////////////
+  //   EMG1    EMG2    EMG3    EMG4    0    0   0 ///////////
+
+  memcpy(&calibrated_packet[CALIBRATED_SIZE], &CALIBRATION_REST_PACKET, sizeof(float));
+  send_ble(calibrated_packet, PACKET_SIZE_CAL, true);
 
   Serial.println("Completed baseline calibration.");
 }
 
 void calibrate_moving() {
   Serial.println("Starting moving calibration...");
-  reset(calibrated_packet, DATA_SIZE);
-  reset(temp_cal_packet, DATA_SIZE);
+  reset(calibrated_packet, CALIBRATED_SIZE);
+  reset(temp_cal_packet, CALIBRATED_SIZE);
 
   int numValues = 0;
   unsigned long calibration_start = millis();
@@ -113,16 +120,19 @@ void calibrate_moving() {
 
   // Finalize calibrated packet
   calibrated_packet[0] = max_depth;
-  for (int i = 1; i < 6; ++i) {
-    calibrated_packet[i] = 0;
-  }
-  calibrated_packet[6] = max_emg[0];
-  calibrated_packet[7] = max_emg[1];
-  calibrated_packet[8] = max_emg[2];
-  calibrated_packet[9] = max_emg[3];
+  calibrated_packet[1] = max_emg[0];
+  calibrated_packet[2] = max_emg[1];
+  calibrated_packet[3] = max_emg[2];
+  calibrated_packet[4] = max_emg[3];
+  calibrated_packet[5] = 0;
+  calibrated_packet[6] = 0;
 
-  memcpy(&calibrated_packet[DATA_SIZE], &CALIBRATION_PACKET, sizeof(float));
-  send_ble(calibrated_packet, PACKET_SIZE, true);
+  ////////////// PACKET STRUCTURE //////////////////////////
+  // Depth   EMG1    EMG2    EMG3    EMG4    0    0/////////
+
+
+  memcpy(&calibrated_packet[CALIBRATED_SIZE], &CALIBRATION_MOVING_PACKET, sizeof(float));
+  send_ble(calibrated_packet, PACKET_SIZE_CAL, true);
 
   Serial.println("Completed moving calibration.");
 }

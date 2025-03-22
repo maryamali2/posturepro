@@ -12,11 +12,17 @@ void onCalibrationWritten(BLEDevice central, BLECharacteristic characteristic) {
   uint8_t command;
   characteristic.readValue(&command, sizeof(command));
 
-  if (command == 1) {
+  if (command == CALIBRATE_REST) {
     Serial.println("Calibration started...");
     calibrate_rest();
     
-    command = 0;
+    command = NO_CALIBRATION;
+    characteristic.writeValue(command, false);
+  } else if (command == CALIBRATE_MOVING) {
+    Serial.println("Calibration started...");
+    calibrate_moving();
+    
+    command = NO_CALIBRATION;
     characteristic.writeValue(command, false);
   }
 }

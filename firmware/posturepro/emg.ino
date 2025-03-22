@@ -48,7 +48,7 @@
 // MyoWare myoware;
 
 // the setup routine runs once when you press reset:
-int initialize_emg(MyoWare* emg, int pin) 
+int initialize_emg(MyoWare* emg, int env_pin) 
 {
   // initialize serial communication at 9600 bits per second:
   // Serial.begin(9600);
@@ -63,9 +63,9 @@ int initialize_emg(MyoWare* emg, int pin)
                                       // adjust the potentiometer setting such that the
                                       // max muscle reading is below 3.3V then update this
                                       // parameter to the measured value of the potentiometer
-  emg->setENVPin(pin);              // Arduino pin connected to ENV
+  emg->setENVPin(env_pin);              // Arduino pin connected to ENV
   // emg->setRAWPin(A1);              // Arduino pin connected to RAW
-  // emg->setREFPin(A2);              // Arduino pin connected to REF
+  // emg->setREFPin(ref_pin);              // Arduino pin connected to REF
   // emg->setRECTPin(A3);             // Arduino pin connected to RECT
 
   return 0;
