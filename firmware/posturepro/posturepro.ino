@@ -6,9 +6,7 @@
 // #include <ArduinoBLE.h>
 
 #define DATA_SIZE 7
-#define CALIBRATED_SIZE 6
 #define HEADER_SIZE 1
-#define PACKET_SIZE_CAL (HEADER_SIZE + CALIBRATED_SIZE)
 #define PACKET_SIZE (HEADER_SIZE + DATA_SIZE)
 #define RAD_TO_DEG (180 / 3.14159)
 #define ANGLE_MARGIN 8.0
@@ -36,8 +34,8 @@ int status;
 float packet[PACKET_SIZE];                    // For first reading in data values
 float lp_packet[DATA_SIZE];                   // Applies simple averaging filter
 float final_packet[DATA_SIZE];                // Data packet sent to app
-float calibrated_packet[CALIBRATED_SIZE];     // Calibrated packet sent to app
-float temp_cal_packet[CALIBRATED_SIZE];       // Used in calibration function
+float calibrated_packet[DATA_SIZE];     // Calibrated packet sent to app
+float temp_cal_packet[DATA_SIZE];       // Used in calibration function
 // float euler[2];                            // 0 is Roll, 1 is Pitch
 // float base_angles[3];
 float max_emg;
@@ -196,6 +194,8 @@ void loop() {
   final_packet[5] = lp_packet[8];
   final_packet[6] = lp_packet[9];
 
+  memcpy(&final_packet[DATA_SIZE], &DATA_PACKET, sizeof(float));
+  send_ble(final_packet, PACKET_SIZE, true);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////     TILT & MUSCLE DETECTION       //////////////////////////////////////////////
