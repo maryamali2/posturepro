@@ -62,6 +62,7 @@ float emg1_at_rest = 0;
 float emg2_at_rest = 0;
 float emg3_at_rest = 0;
 float emg4_at_rest = 0;
+float rest_depth = 0;
 
 void simple_lowpass(float* lp_output, float* data_input) {
   for (int i = 0; i < DATA_SIZE; ++i) {
@@ -131,11 +132,12 @@ void setup() {
   reset(lp_packet, DATA_SIZE);
   reset(calibrated_packet, DATA_SIZE);
   reset(temp_cal_packet, DATA_SIZE);
-  // reset(base_angles, 3);
 
   startTime = millis();
   
   Serial.println("Setup done");
+
+ //  calibrate_rest();
 }
 
 void loop() {
@@ -157,8 +159,9 @@ void loop() {
 
   complementary_filter(dt, lp_packet, &roll_estimate, &pitch_estimate);
 
-  depth = lp_packet[0]*sin(roll_estimate) - lp_packet[1]*cos(roll_estimate)*sin(pitch_estimate) + lp_packet[2]*cos(pitch_estimate)*cos(roll_estimate);
-
+  // depth += -(lp_packet[0]*sin(roll_estimate) + lp_packet[1]*cos(roll_estimate)*sin(pitch_estimate) + lp_packet[2]*cos(pitch_estimate)*cos(roll_estimate)) - rest_depth;
+  // depth -= rest_depth;
+  
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////        PRINT FOR DEBUGGING         ///////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -168,8 +171,8 @@ void loop() {
   Serial.print("    Pitch: ");
   Serial.print(pitch_estimate);
 
-  Serial.print("  Depth: ");
-  Serial.print(depth);
+  // Serial.print("  Depth: ");
+  // Serial.print(depth);
 
   Serial.print("  EMG 1: ");
   Serial.print(lp_packet[6]);
@@ -182,6 +185,9 @@ void loop() {
 
   Serial.print("  EMG 4: ");
   Serial.println(lp_packet[9]);
+
+  // Serial.print("  ADC: ");
+  // Serial.println(analogRead(A0) * 10000);
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -226,5 +232,5 @@ void loop() {
   // }
   // Serial.println(packet[6]);
 
-  delay(500);
+  delay(100);
 }

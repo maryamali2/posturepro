@@ -64,9 +64,9 @@ int initialize_emg(MyoWare* emg, int env_pin)
                                       // max muscle reading is below 3.3V then update this
                                       // parameter to the measured value of the potentiometer
   emg->setENVPin(env_pin);              // Arduino pin connected to ENV
-  // emg->setRAWPin(A1);              // Arduino pin connected to RAW
-  // emg->setREFPin(ref_pin);              // Arduino pin connected to REF
-  // emg->setRECTPin(A3);             // Arduino pin connected to RECT
+  // emg->setRAWPin(A0);              // Arduino pin connected to RAW
+  // emg->setREFPin(A1);              // Arduino pin connected to REF
+  // emg->setRECTPin(A0);             // Arduino pin connected to RECT
 
   return 0;
 }
@@ -75,6 +75,7 @@ int initialize_emg(MyoWare* emg, int env_pin)
 float* read_emg(MyoWare* emg, float* packet, int packet_position) 
 {
   const double envMillivolts = emg->readSensorOutput(MyoWare::ENVELOPE);
+  // const double rectMillivolts = emg->readSensorOutput(MyoWare::RECTIFIED);
   packet[packet_position] = (float) envMillivolts * 10000;
 
   return packet;

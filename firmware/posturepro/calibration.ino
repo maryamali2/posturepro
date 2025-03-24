@@ -36,6 +36,8 @@ void calibrate_rest() {
 
     complementary_filter(dt_calibration, lp_calibrated, &roll_temp, &pitch_temp);
 
+    rest_depth += -lp_calibrated[0]*sin(roll_temp) + lp_calibrated[1]*cos(roll_temp)*sin(pitch_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
+
     sum_roll += roll_temp;
     sum_pitch += pitch_temp;
     emg1_at_rest += lp_calibrated[6];
@@ -52,6 +54,7 @@ void calibrate_rest() {
   emg2_at_rest = emg2_at_rest / numValues;
   emg3_at_rest = emg3_at_rest / numValues;
   emg4_at_rest = emg4_at_rest / numValues;
+  rest_depth = rest_depth / numValues;
 
   //////////// Using calibrated_packet
   calibrated_packet[0] = emg1_at_rest;
@@ -112,7 +115,7 @@ void calibrate_moving() {
 
     complementary_filter(dt_calibration, lp_calibrated, &roll_temp, &pitch_temp);
 
-    current_depth += lp_calibrated[0]*sin(roll_temp) - lp_calibrated[1]*cos(roll_temp)*sin(pitch_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
+    current_depth += -lp_calibrated[0]*sin(roll_temp) + lp_calibrated[1]*cos(roll_temp)*sin(pitch_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
     if (abs(current_depth) > max_depth) {
       max_depth = abs(current_depth);
     }
