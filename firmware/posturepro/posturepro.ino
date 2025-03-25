@@ -62,7 +62,7 @@ float emg1_at_rest = 0;
 float emg2_at_rest = 0;
 float emg3_at_rest = 0;
 float emg4_at_rest = 0;
-float rest_depth = 0;
+float rest_depth = 0.0;
 
 void simple_lowpass(float* lp_output, float* data_input) {
   for (int i = 0; i < DATA_SIZE; ++i) {
@@ -159,7 +159,10 @@ void loop() {
 
   complementary_filter(dt, lp_packet, &roll_estimate, &pitch_estimate);
 
-  // depth += -(lp_packet[0]*sin(roll_estimate) + lp_packet[1]*cos(roll_estimate)*sin(pitch_estimate) + lp_packet[2]*cos(pitch_estimate)*cos(roll_estimate)) - rest_depth;
+  // pitch_estimate *= 2;
+  if (rest_depth != 0.0) {
+    depth += (-lp_packet[0]*sin(pitch_estimate) + lp_packet[1]*cos(pitch_estimate)*sin(roll_estimate) + lp_packet[2]*cos(pitch_estimate)*cos(roll_estimate)) - rest_depth;
+  }
   // depth -= rest_depth;
   
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -171,23 +174,41 @@ void loop() {
   Serial.print("    Pitch: ");
   Serial.print(pitch_estimate);
 
-  // Serial.print("  Depth: ");
-  // Serial.print(depth);
+  Serial.print("  Depth: ");
+  Serial.print(depth);
 
-  Serial.print("  EMG 1: ");
-  Serial.print(lp_packet[6]);
+  Serial.print("  Rest Depth: ");
+  Serial.print(rest_depth);
 
-  Serial.print("  EMG 2: ");
-  Serial.print(lp_packet[7]);
+  Serial.print("  Calced Z: ");
+  Serial.print(-lp_packet[0]*sin(pitch_estimate) + lp_packet[1]*cos(pitch_estimate)*sin(roll_estimate) + lp_packet[2]*cos(pitch_estimate)*cos(roll_estimate));
 
-  Serial.print("  EMG 3: ");
-  Serial.print(lp_packet[8]);
+  Serial.print(" X: ");
+  Serial.print(lp_packet[0]);
 
-  Serial.print("  EMG 4: ");
-  Serial.println(lp_packet[9]);
+  Serial.print(" Y: ");
+  Serial.print(lp_packet[1]);
+
+  Serial.print(" Z: ");
+  Serial.print(lp_packet[2]);
+
+  // Serial.print("  EMG 1: ");
+  // Serial.print(lp_packet[6]);
+
+  // Serial.print("  EMG 2: ");
+  // Serial.print(lp_packet[7]);
+
+  // Serial.print("  EMG 3: ");
+  // Serial.print(lp_packet[8]);
+
+  // Serial.print("  EMG 4: ");
+  // Serial.println(lp_packet[9]);
 
   // Serial.print("  ADC: ");
   // Serial.println(analogRead(A0) * 10000);
+
+  Serial.println();
+
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

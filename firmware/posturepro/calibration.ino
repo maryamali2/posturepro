@@ -36,7 +36,7 @@ void calibrate_rest() {
 
     complementary_filter(dt_calibration, lp_calibrated, &roll_temp, &pitch_temp);
 
-    rest_depth += -lp_calibrated[0]*sin(roll_temp) + lp_calibrated[1]*cos(roll_temp)*sin(pitch_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
+    rest_depth += -lp_calibrated[0]*sin(pitch_temp) + lp_calibrated[1]*cos(pitch_temp)*sin(roll_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
 
     sum_roll += roll_temp;
     sum_pitch += pitch_temp;
@@ -70,6 +70,8 @@ void calibrate_rest() {
 
   memcpy(&calibrated_packet[DATA_SIZE], &CALIBRATION_REST_PACKET, sizeof(float));
   send_ble(calibrated_packet, PACKET_SIZE, true);
+
+  depth = 0.0;
 
   Serial.println("Completed baseline calibration.");
 }
@@ -115,7 +117,7 @@ void calibrate_moving() {
 
     complementary_filter(dt_calibration, lp_calibrated, &roll_temp, &pitch_temp);
 
-    current_depth += -lp_calibrated[0]*sin(roll_temp) + lp_calibrated[1]*cos(roll_temp)*sin(pitch_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
+    current_depth += -lp_calibrated[0]*sin(pitch_temp) + lp_calibrated[1]*cos(pitch_temp)*sin(roll_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
     if (abs(current_depth) > max_depth) {
       max_depth = abs(current_depth);
     }
