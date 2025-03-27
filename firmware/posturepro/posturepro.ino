@@ -18,10 +18,20 @@
 #define CALIBRATE_REST 1
 #define CALIBRATE_MOVING 2
 
+typedef struct dataRead {
+  float acc_x;
+  float acc_y;
+  float acc_z;
+  float gyr_x;
+  float gyr_y;
+  float gyr_z;
+  float emg_1;
+  float emg_2;
+  float emg_3;
+  float emg_4;
+} dataRead_t;
 
-// Define a custom BLE service and characteristic
-// BLEService customService("180C"); // Custom service UUID
-// BLEIntCharacteristic dataCharacteristic("2A57", BLERead | BLENotify); // Notify characteristic
+dataRead_t dataRead;
 
 // Sensors
 MyoWare emg1;
@@ -36,8 +46,6 @@ float lp_packet[DATA_SIZE];                   // Applies simple averaging filter
 float final_packet[DATA_SIZE];                // Data packet sent to app
 float calibrated_packet[DATA_SIZE];     // Calibrated packet sent to app
 float temp_cal_packet[DATA_SIZE];       // Used in calibration function
-// float euler[2];                            // 0 is Roll, 1 is Pitch
-// float base_angles[3];
 float max_emg;
 int calibrated = 0;
 
@@ -62,7 +70,9 @@ float emg1_at_rest = 0;
 float emg2_at_rest = 0;
 float emg3_at_rest = 0;
 float emg4_at_rest = 0;
-float rest_depth = 0.0;
+float rest_acc = 0.0;
+float max_acc_going_down = -1000.0;
+float min_acc_going_up = 1000.0;
 
 void simple_lowpass(float* lp_output, float* data_input) {
   for (int i = 0; i < DATA_SIZE; ++i) {
@@ -122,7 +132,7 @@ void setup() {
   status = initialize_imu(&mpu);
   if (status) {
     Serial.println("Error initializing MPU");
-    while(1);
+    // while(1);
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -136,20 +146,20 @@ void setup() {
   startTime = millis();
   
   Serial.println("Setup done");
-
- //  calibrate_rest();
 }
 
 void loop() {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////     READ DATA FROM SENSORS       ///////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  read_imu(&mpu, packet);
-  read_emg(&emg1, packet, 6);
-  read_emg(&emg2, packet, 7);
+  read_imu(&mpu, &dataRead);
+  read_emg(&emg1, 1, &dataRead);
+  read_emg(&emg2, 2, &dataRead);
+  read_emg(&emg3, 3, &dataRead);
+  read_emg(&emg4, 4, &dataRead);
 
   // Filter
-  simple_lowpass(lp_packet, packet);
+  // simple_lowpass(lp_packet, packet);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////     COMPLEMENTARY FILTER       /////////////////////////////////////////////////
@@ -157,57 +167,59 @@ void loop() {
   dt = (millis() - startTime) * 1/1000;
   startTime = millis();
 
-  complementary_filter(dt, lp_packet, &roll_estimate, &pitch_estimate);
+  complementary_filter(dt, &roll_estimate, &pitch_estimate, &dataRead);
 
   // pitch_estimate *= 2;
-  if (rest_depth != 0.0) {
-    depth += (-lp_packet[0]*sin(pitch_estimate) + lp_packet[1]*cos(pitch_estimate)*sin(roll_estimate) + lp_packet[2]*cos(pitch_estimate)*cos(roll_estimate)) - rest_depth;
-  }
+  // if (rest_depth != 0.0) {
+  //   // depth += (-lp_packet[0]*sin(pitch_estimate) + lp_packet[1]*cos(pitch_estimate)*sin(roll_estimate) + lp_packet[2]*cos(pitch_estimate)*cos(roll_estimate)) - rest_depth;
+  // }
+  depth = dataRead.acc_x - 9.8;
   // depth -= rest_depth;
+
   
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////        PRINT FOR DEBUGGING         ///////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  Serial.print("Roll: ");
-  Serial.print(roll_estimate);
-  Serial.print("    Pitch: ");
-  Serial.print(pitch_estimate);
+  // Serial.print("Roll: ");
+  // Serial.print(roll_estimate);
+  // Serial.print("    Pitch: ");
+  // Serial.print(pitch_estimate);
 
-  Serial.print("  Depth: ");
-  Serial.print(depth);
+  // Serial.print("  Depth: ");
+  // Serial.print(depth);
 
-  Serial.print("  Rest Depth: ");
-  Serial.print(rest_depth);
+  // Serial.print("  Rest Depth: ");
+  // Serial.print(rest_depth);
 
-  Serial.print("  Calced Z: ");
-  Serial.print(-lp_packet[0]*sin(pitch_estimate) + lp_packet[1]*cos(pitch_estimate)*sin(roll_estimate) + lp_packet[2]*cos(pitch_estimate)*cos(roll_estimate));
+  // Serial.print("  Calced Z: ");
+  // Serial.print(-lp_packet[0]*sin(pitch_estimate) + lp_packet[1]*cos(pitch_estimate)*sin(roll_estimate) + lp_packet[2]*cos(pitch_estimate)*cos(roll_estimate));
 
-  Serial.print(" X: ");
-  Serial.print(lp_packet[0]);
+  // Serial.print(" X: ");
+  // Serial.print(lp_packet[0]);
 
-  Serial.print(" Y: ");
-  Serial.print(lp_packet[1]);
+  // Serial.print(" Y: ");
+  // Serial.print(lp_packet[1]);
 
-  Serial.print(" Z: ");
-  Serial.print(lp_packet[2]);
+  // Serial.print(" Z: ");
+  // Serial.print(lp_packet[2]);
 
-  // Serial.print("  EMG 1: ");
-  // Serial.print(lp_packet[6]);
+  Serial.print("  EMG 1: ");
+  Serial.print(dataRead.emg_1);
 
-  // Serial.print("  EMG 2: ");
-  // Serial.print(lp_packet[7]);
+  Serial.print("  EMG 2: ");
+  Serial.print(dataRead.emg_2);
 
-  // Serial.print("  EMG 3: ");
-  // Serial.print(lp_packet[8]);
+  Serial.print("  EMG 3: ");
+  Serial.print(dataRead.emg_3);
 
-  // Serial.print("  EMG 4: ");
-  // Serial.println(lp_packet[9]);
+  Serial.print("  EMG 4: ");
+  Serial.println(dataRead.emg_4);
 
   // Serial.print("  ADC: ");
   // Serial.println(analogRead(A0) * 10000);
 
-  Serial.println();
+  // Serial.println();
 
 
 
@@ -219,10 +231,10 @@ void loop() {
   final_packet[0] = roll_estimate - roll_at_rest;
   final_packet[1] = pitch_estimate - pitch_at_rest;
   final_packet[2] = depth;
-  final_packet[3] = lp_packet[6];
-  final_packet[4] = lp_packet[7];
-  final_packet[5] = lp_packet[8];
-  final_packet[6] = lp_packet[9];
+  final_packet[3] = dataRead.emg_1;
+  final_packet[4] = dataRead.emg_2;
+  final_packet[5] = dataRead.emg_3;
+  final_packet[6] = dataRead.emg_4;
 
   memcpy(&final_packet[DATA_SIZE], &DATA_PACKET, sizeof(float));
   send_ble(final_packet, PACKET_SIZE, true);

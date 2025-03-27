@@ -5,8 +5,19 @@ float lp_calibrated[DATA_SIZE];
 float sum_roll = 0.0;
 float sum_pitch = 0.0;
 
+// Max
+float max_emg_1 = -1000;
+float max_emg_2 = -1000;
+float max_emg_3 = -1000;
+float max_emg_4 = -1000;
+
+dataRead_t calibrateRead;
+
 void calibrate_rest() {
   // Initialize rest array
+
+  dataRead_t calibrateRead;
+
   Serial.println("Starting baseline calibration...");
   reset(calibrated_packet, DATA_SIZE);
   reset(temp_cal_packet, DATA_SIZE);
@@ -19,31 +30,33 @@ void calibrate_rest() {
     // Read IMU values into packet
 
     //////////// Using temp_cal_packet
-    read_imu(&mpu, temp_cal_packet);
+    read_imu(&mpu, &calibrateRead);
 
     // Read 4 EMG values into packet
-    read_emg(&emg1, temp_cal_packet, 6);
-    read_emg(&emg2, temp_cal_packet, 7);
-    read_emg(&emg3, temp_cal_packet, 8);
-    read_emg(&emg4, temp_cal_packet, 9);
+    read_emg(&emg1, 1, &calibrateRead);
+    read_emg(&emg2, 2, &calibrateRead);
+    read_emg(&emg3, 3, &calibrateRead);
+    read_emg(&emg4, 4, &calibrateRead);
 
-    simple_lowpass(lp_calibrated, temp_cal_packet);
+    // simple_lowpass(lp_calibrated, temp_cal_packet);
 
     //////////// Using lp_calibrated
 
     dt_calibration = (millis() - start_dt) * 1/1000;
     start_dt = millis();
 
-    complementary_filter(dt_calibration, lp_calibrated, &roll_temp, &pitch_temp);
+    complementary_filter(dt_calibration, &roll_temp, &pitch_temp, &calibrateRead);
 
-    rest_depth += -lp_calibrated[0]*sin(pitch_temp) + lp_calibrated[1]*cos(pitch_temp)*sin(roll_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
+    rest_acc += calibrateRead.acc_x - 9.8;
+    
+    // -lp_calibrated[0]*sin(pitch_temp) + lp_calibrated[1]*cos(pitch_temp)*sin(roll_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
 
     sum_roll += roll_temp;
     sum_pitch += pitch_temp;
-    emg1_at_rest += lp_calibrated[6];
-    emg2_at_rest += lp_calibrated[7];
-    emg3_at_rest += lp_calibrated[8];
-    emg4_at_rest += lp_calibrated[9];
+    emg1_at_rest += calibrateRead.emg_1;
+    emg2_at_rest += calibrateRead.emg_2;
+    emg3_at_rest += calibrateRead.emg_3;
+    emg4_at_rest += calibrateRead.emg_4;
     numValues += 1;
   }
 
@@ -54,13 +67,13 @@ void calibrate_rest() {
   emg2_at_rest = emg2_at_rest / numValues;
   emg3_at_rest = emg3_at_rest / numValues;
   emg4_at_rest = emg4_at_rest / numValues;
-  rest_depth = rest_depth / numValues;
+  rest_acc = rest_acc / numValues;
 
   //////////// Using calibrated_packet
-  calibrated_packet[0] = emg1_at_rest;
-  calibrated_packet[1] = emg2_at_rest;
-  calibrated_packet[2] = emg3_at_rest;
-  calibrated_packet[3] = emg4_at_rest;
+  calibrated_packet[0] = calibrateRead.emg_1;
+  calibrated_packet[1] = calibrateRead.emg_2;
+  calibrated_packet[2] = calibrateRead.emg_3;
+  calibrated_packet[3] = calibrateRead.emg_4;
   calibrated_packet[4] = 0;
   calibrated_packet[5] = 0;
   calibrated_packet[6] = 0;
@@ -84,53 +97,61 @@ void calibrate_moving() {
   int numValues = 0;
   unsigned long calibration_start = millis();
   unsigned long start_dt = millis();
-  float max_emg[4];
-  reset(max_emg, 4);
+
   float current_depth = 0.0;
   float max_depth = INT_MIN;
 
   // 10s to do a squat
   while (millis() - calibration_start < 10000) {
-    read_imu(&mpu, temp_cal_packet);
-    read_emg(&emg1, temp_cal_packet, 6);
-    read_emg(&emg2, temp_cal_packet, 7);
-    read_emg(&emg3, temp_cal_packet, 8);
-    read_emg(&emg4, temp_cal_packet, 9);
+    read_imu(&mpu, &calibrateRead);
+    read_emg(&emg1, 1, &calibrateRead);
+    read_emg(&emg2, 2, &calibrateRead);
+    read_emg(&emg3, 3, &calibrateRead);
+    read_emg(&emg4, 4, &calibrateRead);
 
-    if (temp_cal_packet[6] > max_emg[0]) {
-      max_emg[0] = temp_cal_packet[6];
+    if (calibrateRead.emg_1 > max_emg_1) {
+      max_emg_1 = calibrateRead.emg_1;
     }
-    if (temp_cal_packet[7] > max_emg[1]) {
-      max_emg[1] = temp_cal_packet[7];
+    if (calibrateRead.emg_2 > max_emg_2) {
+      max_emg_2 = calibrateRead.emg_2;
     }
-    if (temp_cal_packet[8] > max_emg[2]) {
-      max_emg[2] = temp_cal_packet[8];
+    if (calibrateRead.emg_3 > max_emg_3) {
+      max_emg_3 = calibrateRead.emg_3;
     }
-    if (temp_cal_packet[9] > max_emg[3]) {
-      max_emg[3] = temp_cal_packet[9];
+    if (calibrateRead.emg_4 > max_emg_4) {
+      max_emg_4 = calibrateRead.emg_4;
     }
 
-    simple_lowpass(lp_calibrated, temp_cal_packet);
+    // simple_lowpass(lp_calibrated, temp_cal_packet);
 
     dt_calibration = (millis() - start_dt) * 1/1000;
     start_dt = millis();
 
-    complementary_filter(dt_calibration, lp_calibrated, &roll_temp, &pitch_temp);
+    complementary_filter(dt_calibration, &roll_temp, &pitch_temp, &calibrateRead);
 
-    current_depth += -lp_calibrated[0]*sin(pitch_temp) + lp_calibrated[1]*cos(pitch_temp)*sin(roll_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
-    if (abs(current_depth) > max_depth) {
-      max_depth = abs(current_depth);
+    // current_depth += -lp_calibrated[0]*sin(pitch_temp) + lp_calibrated[1]*cos(pitch_temp)*sin(roll_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
+    if (calibrateRead.acc_x - 9.8 > max_acc_going_down) {
+      max_acc_going_down = lp_calibrated[0] - 9.8;
     }
+
+    if (calibrateRead.acc_x - 9.8 < min_acc_going_up) {
+      min_acc_going_up = lp_calibrated[0] - 9.8;
+    }
+
+    // current_depth += lp_calibrated[0] - 9.88;
+    // if (abs(current_depth) > max_depth) {
+    //   max_depth = abs(current_depth);
+    // }
   }
 
   // Finalize calibrated packet
   calibrated_packet[0] = max_depth;
-  calibrated_packet[1] = max_emg[0];
-  calibrated_packet[2] = max_emg[1];
-  calibrated_packet[3] = max_emg[2];
-  calibrated_packet[4] = max_emg[3];
-  calibrated_packet[5] = 0;
-  calibrated_packet[6] = 0;
+  calibrated_packet[1] = max_emg_1;
+  calibrated_packet[2] = max_emg_2;
+  calibrated_packet[3] = max_emg_3;
+  calibrated_packet[4] = max_emg_4;
+  calibrated_packet[5] = max_acc_going_down;
+  calibrated_packet[6] = min_acc_going_up;
 
   ////////////// PACKET STRUCTURE //////////////////////////
   // Depth   EMG1    EMG2    EMG3    EMG4    0    0/////////

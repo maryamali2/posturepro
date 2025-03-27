@@ -76,25 +76,18 @@ int initialize_imu(Adafruit_MPU6050* mpu) {
   return 0;
 }
 
-float* read_imu(Adafruit_MPU6050* mpu, float* packet) {
+int read_imu(Adafruit_MPU6050* mpu, dataRead_t* readNode) {
   /* Get new sensor events with the readings */
   sensors_event_t a, g, temp;
   mpu->getEvent(&a, &g, &temp);
 
-  packet[0] = a.acceleration.x;
-  packet[1] = a.acceleration.y;
-  packet[2] = a.acceleration.z;
+  readNode->acc_x = a.acceleration.x;
+  readNode->acc_y = a.acceleration.y;
+  readNode->acc_z = a.acceleration.z - 0.9;
 
-  packet[3] = g.gyro.x;
-  packet[4] = g.gyro.y;
-  packet[5] = g.gyro.z;
+  readNode->gyr_x = g.gyro.x;
+  readNode->gyr_y = g.gyro.y;
+  readNode->gyr_z = g.gyro.z;
 
-  // Serial.print("Temperature: ");
-  // Serial.print(temp.temperature);
-  // Serial.println(" degC");
-
-  // Serial.println("");
-  // delay(500);
-
-  return packet;
+  return 0;
 }

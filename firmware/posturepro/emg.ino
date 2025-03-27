@@ -72,11 +72,22 @@ int initialize_emg(MyoWare* emg, int env_pin)
 }
 
 // the loop routine runs over and over again forever:
-float* read_emg(MyoWare* emg, float* packet, int packet_position) 
+int read_emg(MyoWare* emg, int emg_no, dataRead_t* readNode) 
 {
   const double envMillivolts = emg->readSensorOutput(MyoWare::ENVELOPE);
-  // const double rectMillivolts = emg->readSensorOutput(MyoWare::RECTIFIED);
-  packet[packet_position] = (float) envMillivolts * 10000;
 
-  return packet;
+  switch(emg_no) {
+    case 1:
+      readNode->emg_1 = (float) envMillivolts * 10000;
+    case 2:
+      readNode->emg_2 = (float) envMillivolts * 10000;
+    case 3:
+      readNode->emg_3 = (float) envMillivolts * 10000;
+    case 4:
+      readNode->emg_4 = (float) envMillivolts * 10000;
+    default:
+      return -1;
+  }
+
+  return 0;
 }
