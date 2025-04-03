@@ -83,7 +83,16 @@ int read_imu(Adafruit_MPU6050* mpu, dataRead_t* readNode) {
 
   readNode->acc_x = a.acceleration.x;
   readNode->acc_y = a.acceleration.y;
-  readNode->acc_z = a.acceleration.z - 0.9;
+  readNode->acc_z = 0.985929648*(a.acceleration.z - .75);
+
+  Serial.print("x: ");
+  Serial.print(readNode->acc_x);
+
+  Serial.print("y: ");
+  Serial.print(readNode->acc_y);
+
+  Serial.print("z: ");
+  Serial.println(readNode->acc_z);
 
   readNode->gyr_x = g.gyro.x;
   readNode->gyr_y = g.gyro.y;

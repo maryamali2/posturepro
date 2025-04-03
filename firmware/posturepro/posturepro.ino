@@ -74,6 +74,9 @@ float rest_acc = 0.0;
 float max_acc_going_down = -1000.0;
 float min_acc_going_up = 1000.0;
 
+float vel = 0.0;
+int acc_state = 0;
+
 void simple_lowpass(float* lp_output, float* data_input) {
   for (int i = 0; i < DATA_SIZE; ++i) {
     lp_output[i] = (lp_output[i] + data_input[i]) / 2;
@@ -173,7 +176,31 @@ void loop() {
   // if (rest_depth != 0.0) {
   //   // depth += (-lp_packet[0]*sin(pitch_estimate) + lp_packet[1]*cos(pitch_estimate)*sin(roll_estimate) + lp_packet[2]*cos(pitch_estimate)*cos(roll_estimate)) - rest_depth;
   // }
-  depth = dataRead.acc_x - 9.8;
+
+  float sin_phi = sinf(roll_estimate);
+  float cos_phi = cosf(roll_estimate);
+  float sin_theta = sinf(pitch_estimate);
+  float cos_theta = cosf(pitch_estimate);
+
+  float z_acc = ((-dataRead.acc_x * sin_theta) + ((dataRead.acc_y * sin_phi + dataRead.acc_z * cos_phi) * cos_theta)) - 9.7;
+
+  z_acc = abs(z_acc) > .75 ? z_acc : 0.0;
+
+  if (z_acc == 0.0) {
+    acc_state++;
+  } else {
+    acc_state = 0;
+  }
+
+  if (acc_state > 10) {
+    vel = 0.0;
+  } else {
+    vel += z_acc;
+  }
+  depth += vel;
+
+
+  // depth = dataRead.acc_x - 9.81;
   // depth -= rest_depth;
 
   
@@ -186,8 +213,11 @@ void loop() {
   // Serial.print("    Pitch: ");
   // Serial.print(pitch_estimate);
 
-  // Serial.print("  Depth: ");
-  // Serial.print(depth);
+  Serial.print(" DEPTAH: ");
+  Serial.print(z_acc);
+
+  Serial.print("  Depth: ");
+  Serial.print(depth);
 
   // Serial.print("  Rest Depth: ");
   // Serial.print(rest_depth);
@@ -204,22 +234,22 @@ void loop() {
   // Serial.print(" Z: ");
   // Serial.print(lp_packet[2]);
 
-  Serial.print("  EMG 1: ");
-  Serial.print(dataRead.emg_1);
+  // Serial.print("  EMG 1: ");
+  // Serial.print(dataRead.emg_1);
 
-  Serial.print("  EMG 2: ");
-  Serial.print(dataRead.emg_2);
+  // Serial.print("  EMG 2: ");
+  // Serial.print(dataRead.emg_2);
 
-  Serial.print("  EMG 3: ");
-  Serial.print(dataRead.emg_3);
+  // Serial.print("  EMG 3: ");
+  // Serial.print(dataRead.emg_3);
 
-  Serial.print("  EMG 4: ");
-  Serial.println(dataRead.emg_4);
+  // Serial.print("  EMG 4: ");
+  // Serial.print(dataRead.emg_4);
 
   // Serial.print("  ADC: ");
   // Serial.println(analogRead(A0) * 10000);
 
-  // Serial.println();
+  Serial.println();
 
 
 
