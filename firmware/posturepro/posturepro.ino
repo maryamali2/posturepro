@@ -200,7 +200,7 @@ void loop() {
   depth += vel;
 
 
-  // depth = dataRead.acc_x - 9.81;
+  depth = dataRead.acc_x - 9.81;
   // depth -= rest_depth;
 
   
@@ -213,11 +213,11 @@ void loop() {
   // Serial.print("    Pitch: ");
   // Serial.print(pitch_estimate);
 
-  Serial.print(" DEPTAH: ");
-  Serial.print(z_acc);
+  // Serial.print(" DEPTAH: ");
+  // Serial.print(z_acc);
 
-  Serial.print("  Depth: ");
-  Serial.print(depth);
+  // Serial.print("  Depth: ");
+  // Serial.print(depth);
 
   // Serial.print("  Rest Depth: ");
   // Serial.print(rest_depth);
@@ -234,8 +234,8 @@ void loop() {
   // Serial.print(" Z: ");
   // Serial.print(lp_packet[2]);
 
-  // Serial.print("  EMG 1: ");
-  // Serial.print(dataRead.emg_1);
+  Serial.print("  EMG 1: ");
+  Serial.print(dataRead.emg_1);
 
   // Serial.print("  EMG 2: ");
   // Serial.print(dataRead.emg_2);
