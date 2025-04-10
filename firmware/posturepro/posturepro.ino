@@ -17,6 +17,7 @@
 #define NO_CALIBRATION 0
 #define CALIBRATE_REST 1
 #define CALIBRATE_MOVING 2
+#define ZERO_DEPTH 3
 
 typedef struct dataRead {
   float acc_x;
@@ -168,6 +169,7 @@ void loop() {
   /////////////////////////////////////////////     COMPLEMENTARY FILTER       /////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   dt = (millis() - startTime) * 1/1000;
+  // float dt_z = dt * 10000000;
   startTime = millis();
 
   complementary_filter(dt, &roll_estimate, &pitch_estimate, &dataRead);
@@ -184,23 +186,29 @@ void loop() {
 
   float z_acc = ((-dataRead.acc_x * sin_theta) + ((dataRead.acc_y * sin_phi + dataRead.acc_z * cos_phi) * cos_theta)) - 9.7;
 
-  z_acc = abs(z_acc) > .75 ? z_acc : 0.0;
+  z_acc = abs(z_acc) > .5 ? z_acc : 0.0;
 
-  if (z_acc == 0.0) {
-    acc_state++;
+  if (abs(dataRead.gyr_x) > 0.5 || abs(dataRead.gyr_y) > 0.5 || abs(dataRead.gyr_z) > 0.5) {
+    z_acc = 0.0;
   } else {
-    acc_state = 0;
+    if (z_acc == 0.0) {
+      acc_state++;
+    } else {
+      acc_state = 0;
+    }
+
+    if (acc_state > 10) {
+      vel = 0.0;
+      depth = 0.0; //
+    } else {
+      vel += z_acc;
+    }
   }
 
-  if (acc_state > 10) {
-    vel = 0.0;
-  } else {
-    vel += z_acc;
-  }
   depth += vel;
 
 
-  depth = dataRead.acc_x - 9.81;
+  // depth = dataRead.acc_x - 9.81;
   // depth -= rest_depth;
 
   
@@ -213,11 +221,11 @@ void loop() {
   // Serial.print("    Pitch: ");
   // Serial.print(pitch_estimate);
 
-  // Serial.print(" DEPTAH: ");
-  // Serial.print(z_acc);
+  Serial.print(" DEPTAH: ");
+  Serial.print(z_acc);
 
-  // Serial.print("  Depth: ");
-  // Serial.print(depth);
+  Serial.print("  Depth: ");
+  Serial.print(depth);
 
   // Serial.print("  Rest Depth: ");
   // Serial.print(rest_depth);
@@ -236,6 +244,12 @@ void loop() {
 
   Serial.print("  EMG 1: ");
   Serial.print(dataRead.emg_1);
+
+  Serial.print("  pitch : ");
+  Serial.print(roll_estimate - roll_at_rest);
+
+  Serial.print("  roll : ");
+  Serial.print(roll_estimate - roll_at_rest);
 
   // Serial.print("  EMG 2: ");
   // Serial.print(dataRead.emg_2);

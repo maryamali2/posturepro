@@ -16,9 +16,13 @@ dataRead_t calibrateRead;
 void calibrate_rest() {
   // Initialize rest array
 
+
   dataRead_t calibrateRead;
 
   Serial.println("Starting baseline calibration...");
+
+  depth = 0.0;
+
   reset(calibrated_packet, DATA_SIZE);
   reset(temp_cal_packet, DATA_SIZE);
 
@@ -94,12 +98,14 @@ void calibrate_moving() {
   reset(calibrated_packet, DATA_SIZE);
   reset(temp_cal_packet, DATA_SIZE);
 
+  depth = 0.0;
+
   int numValues = 0;
   unsigned long calibration_start = millis();
   unsigned long start_dt = millis();
 
   float current_depth = 0.0;
-  float max_depth = INT_MIN;
+  float max_depth = 1000;
 
   // 10s to do a squat
   while (millis() - calibration_start < 10000) {
@@ -125,27 +131,53 @@ void calibrate_moving() {
     // simple_lowpass(lp_calibrated, temp_cal_packet);
 
     dt_calibration = (millis() - start_dt) * 1/1000;
+    // float dt_z = dt_calibration * 1000;
     start_dt = millis();
 
     complementary_filter(dt_calibration, &roll_temp, &pitch_temp, &calibrateRead);
 
     // current_depth += -lp_calibrated[0]*sin(pitch_temp) + lp_calibrated[1]*cos(pitch_temp)*sin(roll_temp) + lp_calibrated[2]*cos(pitch_temp)*cos(roll_temp);
-    if (calibrateRead.acc_x - 9.8 > max_acc_going_down) {
-      max_acc_going_down = lp_calibrated[0] - 9.8;
+    float sin_phi = sinf(roll_estimate);
+    float cos_phi = cosf(roll_estimate);
+    float sin_theta = sinf(pitch_estimate);
+    float cos_theta = cosf(pitch_estimate);
+
+    float z_acc = ((-calibrateRead.acc_x * sin_theta) + ((calibrateRead.acc_y * sin_phi + calibrateRead.acc_z * cos_phi) * cos_theta)) - 9.7;
+
+    z_acc = abs(z_acc) > .5 ? z_acc : 0.0;
+
+    if (abs(calibrateRead.gyr_x) > 0.5 || abs(calibrateRead.gyr_y) > 0.5 || abs(calibrateRead.gyr_z) > 0.5) {
+      z_acc = 0.0;
+    } else {
+      if (z_acc == 0.0) {
+        acc_state++;
+      } else {
+        acc_state = 0;
+      }
+
+      if (acc_state > 10) {
+        vel = 0.0;
+        depth = 0.0; //
+      } else {
+        vel += z_acc;
+      }
     }
 
-    if (calibrateRead.acc_x - 9.8 < min_acc_going_up) {
-      min_acc_going_up = lp_calibrated[0] - 9.8;
-    }
+    depth += vel;
 
-    // current_depth += lp_calibrated[0] - 9.88;
-    // if (abs(current_depth) > max_depth) {
-    //   max_depth = abs(current_depth);
-    // }
+    Serial.print(" vel: ");
+    Serial.print(vel);
+    Serial.print(" depth: ");
+    Serial.print(depth);
+    Serial.println("");
+
+    if (depth < max_depth) {
+      max_depth = depth;
+    }
   }
 
   // Finalize calibrated packet
-  calibrated_packet[0] = max_depth;
+  calibrated_packet[0] = abs(max_depth)/1000;
   calibrated_packet[1] = max_emg_1;
   calibrated_packet[2] = max_emg_2;
   calibrated_packet[3] = max_emg_3;
@@ -157,8 +189,10 @@ void calibrate_moving() {
   // Depth   EMG1    EMG2    EMG3    EMG4    0    0/////////
 
 
+  depth = 0.0;
+
   memcpy(&calibrated_packet[DATA_SIZE], &CALIBRATION_MOVING_PACKET, sizeof(float));
   send_ble(calibrated_packet, PACKET_SIZE, true);
-
+  Serial.println(abs(max_depth));
   Serial.println("Completed moving calibration.");
 }

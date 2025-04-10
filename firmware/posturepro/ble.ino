@@ -12,19 +12,21 @@ void onCalibrationWritten(BLEDevice central, BLECharacteristic characteristic) {
   uint8_t command;
   characteristic.readValue(&command, sizeof(command));
 
-  if (command == CALIBRATE_REST) {
-    Serial.println("Calibration started...");
-    calibrate_rest();
-    
-    command = NO_CALIBRATION;
-    characteristic.writeValue(command, false);
-  } else if (command == CALIBRATE_MOVING) {
-    Serial.println("Calibration started...");
-    calibrate_moving();
-    
-    command = NO_CALIBRATION;
-    characteristic.writeValue(command, false);
+  switch (command) {
+    case CALIBRATE_REST:
+      Serial.println("Calibration started...");
+      calibrate_rest();
+      break;
+    case CALIBRATE_MOVING:
+      Serial.println("Calibration started...");
+      calibrate_moving();
+      break;
+    case ZERO_DEPTH:
+      Serial.println("Zeroing depth...");
+      depth = 0.0;
+      break;
   }
+  characteristic.writeValue(command, NO_CALIBRATION);
 }
 
 int initialize_ble() {
