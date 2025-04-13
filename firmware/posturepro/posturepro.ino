@@ -3,7 +3,6 @@
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
 #include "limits.h"
-// #include <ArduinoBLE.h>
 
 #define DATA_SIZE 7
 #define HEADER_SIZE 1
@@ -136,7 +135,7 @@ void setup() {
   status = initialize_imu(&mpu);
   if (status) {
     Serial.println("Error initializing MPU");
-    // while(1);
+    while(1);
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -153,6 +152,8 @@ void setup() {
 }
 
 void loop() {
+  startTime = millis();
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////     READ DATA FROM SENSORS       ///////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -162,15 +163,12 @@ void loop() {
   read_emg(&emg3, 3, &dataRead);
   read_emg(&emg4, 4, &dataRead);
 
-  // Filter
-  // simple_lowpass(lp_packet, packet);
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////     COMPLEMENTARY FILTER       /////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  dt = (millis() - startTime) * 1/1000;
+  dt = (millis() - startTime) / 1000.0;
   // float dt_z = dt * 10000000;
-  startTime = millis();
+  // startTime = millis();
 
   complementary_filter(dt, &roll_estimate, &pitch_estimate, &dataRead);
 
@@ -245,11 +243,17 @@ void loop() {
   Serial.print("  EMG 1: ");
   Serial.print(dataRead.emg_1);
 
-  Serial.print("  pitch : ");
+  Serial.print("  Roll Rest : ");
+  Serial.print(roll_at_rest);
+
+  Serial.print("  Current Roll : ");
+  Serial.print(roll_estimate);
+
+  Serial.print("  Roll Diff : ");
   Serial.print(roll_estimate - roll_at_rest);
 
-  Serial.print("  roll : ");
-  Serial.print(roll_estimate - roll_at_rest);
+  // Serial.print("  roll : ");
+  // Serial.print(roll_estimate - roll_at_rest);
 
   // Serial.print("  EMG 2: ");
   // Serial.print(dataRead.emg_2);
@@ -283,31 +287,5 @@ void loop() {
   memcpy(&final_packet[DATA_SIZE], &DATA_PACKET, sizeof(float));
   send_ble(final_packet, PACKET_SIZE, true);
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  /////////////////////////////////////////////     TILT & MUSCLE DETECTION       //////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Serial.print("Tilt Sideways: ");
-  // // Serial.print("Tilt Front/Back: ");
-  // if (abs(roll_estimate - roll_at_rest) > 0.30) {
-  //   Serial.print("Y");
-  // } else {
-  //   Serial.print("N");
-  // }
-  // // Serial.print("  Tilt Sideways: ");
-  // Serial.print("    Tilt Front/Back: ");
-  // if (abs(pitch_estimate - pitch_at_rest) > 0.30) {
-  //   Serial.println("Y");
-  // } else {
-  //   Serial.println("N");
-  // }
-  
-  // Serial.print("    Muscle Flex: ");
-  // if (packet[6] > emg1_at_rest + EMG_THRESHOLD) {
-  //   Serial.println("Y");
-  // } else {
-  //   Serial.println("N");
-  // }
-  // Serial.println(packet[6]);
-
-  delay(100);
+  // delay(100);
 }

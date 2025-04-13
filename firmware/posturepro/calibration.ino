@@ -13,9 +13,14 @@ float max_emg_4 = -1000;
 
 dataRead_t calibrateRead;
 
+float start_dt = 0.01;
+
 void calibrate_rest() {
   // Initialize rest array
-
+  roll_at_rest = 0.0;
+  pitch_at_rest = 0.0;
+  sum_roll = 0.0;
+  sum_pitch = 0.0;
 
   dataRead_t calibrateRead;
 
@@ -45,9 +50,12 @@ void calibrate_rest() {
     // simple_lowpass(lp_calibrated, temp_cal_packet);
 
     //////////// Using lp_calibrated
+    unsigned long currentTime = millis();
+    dt_calibration = (currentTime - start_dt) * 1/1000;
+    start_dt = currentTime;
 
-    dt_calibration = (millis() - start_dt) * 1/1000;
-    start_dt = millis();
+    // dt_calibration = (millis() - start_dt) / 1000.0;
+    // start_dt = millis();
 
     complementary_filter(dt_calibration, &roll_temp, &pitch_temp, &calibrateRead);
 
@@ -102,7 +110,6 @@ void calibrate_moving() {
 
   int numValues = 0;
   unsigned long calibration_start = millis();
-  unsigned long start_dt = millis();
 
   float current_depth = 0.0;
   float max_depth = 1000;
@@ -130,7 +137,7 @@ void calibrate_moving() {
 
     // simple_lowpass(lp_calibrated, temp_cal_packet);
 
-    dt_calibration = (millis() - start_dt) * 1/1000;
+    dt_calibration = (millis() - start_dt) / 1000.0;
     // float dt_z = dt_calibration * 1000;
     start_dt = millis();
 
