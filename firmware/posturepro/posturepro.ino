@@ -243,6 +243,9 @@ void loop() {
   Serial.print("  EMG 1: ");
   Serial.print(dataRead.emg_1);
 
+  Serial.print("  EMG 2: ");
+  Serial.print(dataRead.emg_2);
+
   Serial.print("  Roll Rest : ");
   Serial.print(roll_at_rest);
 
